@@ -1,0 +1,27 @@
+[Unit]
+Description=BIP110 bit4 watcher (ZMQ -> Desktop toast + Pushover)
+After=network-online.target bitcoind.service
+Wants=network-online.target bitcoind.service
+
+[Service]
+Type=simple
+User=bitcoin
+Group=bitcoin
+WorkingDirectory=/home/bitcoin/monitoring/bip110
+EnvironmentFile=/home/bitcoin/monitoring/bip110/.env
+
+# Run in foreground so systemd can supervise it
+ExecStart=/home/bitcoin/monitoring/bip110/.venv/bin/python /home/bitcoin/monitoring/bip110/watch_bit4.py
+
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=20
+KillSignal=SIGTERM
+
+# Basic hardening (safe defaults)
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target
