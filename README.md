@@ -5,15 +5,15 @@ This repo contains a **lightweight, opinionated watcher system** implemented acr
 1) **A Linux Bitcoin node** : runs `watch_bit4.py` and subscribes to your node’s ZMQ `rawblock` feed.  
 2) **A Windows Desktop** : runs a simple HTTP listener that turns incoming messages into **BurntToast** notifications.
 
-Optionally, the watcher can also send higher-attention alerts merit a phone-push via **Pushover** when high priority events call for a phone call, like a positive catch of the looked for header.
+Optionally, the watcher can also send higher-attention alerts that merit a phone message via **Pushover** for special events, like a positive catch of the looked-for header.
 
-Specifically, the watcher as implemented checks for the BIP-110 “Reduced Data” support signal on **versionbits bit 4**. Miners can signal readiness and support by setting bit 4 in the `version` field of blocks they mine. The watcher alerts you when it sees a block with that bit set so it can be celebrated as proactive miner suppport is the desired path.
+Specifically, the watcher as implemented checks for the BIP-110 “Reduced Data” support signal on **versionbits bit 4**. Miners can signal readiness and support by setting bit 4 in the `version` field of blocks they mine. The watcher alerts you when it sees such a block with that bit set, so that it can be celebrated broadly, as proactive miner suppport is the desired path for BIP-110.
 
-> NOTE:  This is a hobby / reference implementation built around my local implementation. It’s designed to be forked and tailored to *your* own environment as needed.
+> NOTE:  This is a hobby / reference implementation built around my local implementation of a headless node server, managed from a convenient Windows Desktop environment. It’s designed to be forked (or just pulled) and tailored to *your* own specific environment as needed, and is shared in that spirit.
 
 ---
 
-## What this does
+## What this Watcher System Does
 
 On each new block, `watch_bit4.py`:
 
@@ -23,22 +23,22 @@ On each new block, `watch_bit4.py`:
 - Sends desired notifications based on your `.env` configuration
 - This system is easily modified and extended for other node-pushed alerts you may want to implement as real-time pushes (anything exposed by RPC like health and peer and network info) 
 
-Notification channels currently supported:
+Notification channels currently supported are:
 
-- **Windows desktop toasts** via a LAN HTTP POST to `toast-listener.ps1` (BurntToast)
-- **Phone notifications** via **Pushover** (optional)
+- **Windows desktop toasts** via a LAN HTTP POST to `toast-listener.ps1` (BurntToast Library)
+- **Phone notifications** via **Pushover** (optional, a free Phone-App)
 
 ---
 
 ## Configurations
 
-The scripts are configurable by channel and frequency, so your configuration can serve the signaling:
+The scripts are configurable by channel and frequency, so your configuration can be meaningful within the signaling patterns:
 
-- I like **desktop toast on every block** (they don't bother me, but let me know the system is up).
+- I like **frequent desktop toasts, once every block** (these let me know the system is up and there are not ANY signaling miners YET).
 - But I reserve **phone notifications** for:
-  - startup channel check
-  - a very low-rate **heartbeat** (144 blocks, ≈ daily) so that off-beat message = IMPORTANT.
-  - immediate messaging if a **positive bit-4 signal** is flashed so to quickly spread the news!
+  - setup/startup channel check
+  - a very low-rate **heartbeat** (144 blocks, ≈ 1x daily) so that off-beat messages signal the event I'm looking for...
+  - immediate messaging on any block with a **positive bit-4 signal** flash so I can quickly spread the news to fellow enthusiasts!
 
 Available configurations by channel are:
 
@@ -51,9 +51,9 @@ See `.env.example` for a working baseline.
 
 ---
 
-## My Opinionated Setup For Reference 
+## My Personal Setup For Cross-Reference 
 
-This is my personal setup around which v.0 is designed, what it supports 'as is':
+This is my personal setup around which v.0 is designed, this what it supports 'as is':
 
 - **A Separate Linux Node:** A Linux headless box running bitcoind/knots with `zmqpubrawblock` 
 - **A Separate Windows Desktop:** A Windows machine on the same LAN running a BurntToast listener (HTTP POST)
@@ -81,8 +81,10 @@ zmqpubrawblock=tcp://127.0.0.1:28332
 ```
 Restart bitcoind only if you change the configuration, before node-side Watcher install step below.
 
-## Set Up Windows toast listener, locally and across LAN, in readiness for messaging 
-Install BurntToast (PowerShell, Admin is best for AllUsers (can still work with currentUser)):
+# Quick-Start Setups:  Windows Toast, Windows Task, Node Watcher, Linux Service
+
+## 1) Set Up Windows toast listener on Local & LAN and verify messaging 
+Install BurntToast (PowerShell as Admin is best for AllUsers (can still work with currentUser)):
 ``` PowerShell
 Install-Module BurntToast -Scope AllUsers -Force
 ```
@@ -91,12 +93,12 @@ Reserve URL + firewall (example for port 8099):
 netsh http add urlacl url=http://+:8099/ user=$env:USERNAME
 New-NetFirewallRule -DisplayName "BIP110 Toast Listener 8099" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8099
 ```
-Run the Installer-Updater from the project root to copy the listener into place, and set up a Windows 'Scheduled Task,' this will keep the script running durably across restarts like a service:
+Run the Installer-Updater from the project root to copy the Toast listener into place, and set up a Windows 'Scheduled Task,' this will keep the script running durably across restarts 'like' a service:
 ```bash
 .\scripts\install-or-update-toast-listener-task.ps1
 ```
 
-Test from local first and then anywhere on your home LAN to see a test-toast pop up on your Windows Desktop:
+Test from local first and then from anywhere on your home LAN to see a test-toast pop up on your Windows Desktop:
 ``` PowerShell
 On your Windows Desktop Computer, you can invoke using PowerShell... 
 Invoke-WebRequest -Method POST -Uri "http://localhost:8099/" -Body "Desktop listener test ✅"
@@ -109,7 +111,7 @@ curl.exe -X POST http://localhost:8099/ -d "TEST: toast listener installed or up
 then from your Linux Node-Server which will confirm the firewall rule is ready too:
 curl -H "Content-Type: text/plain; charset=utf-8"   --data-binary "✅ Node -> Desktop toast test from the Node Server"   http://<YOUR-WINDOWS-LOCAL-IP>:8099/
 ```
-## Set up Pushover (optional but recommended)
+## 1a) Set up Pushover (optional but recommended)
 
 This is the optional-but-recommended “phone alert” channel.
 
@@ -125,7 +127,7 @@ Paste these into your node .env as variables - these stay private (don't push to
 - PUSHOVER_USER=...
 - PUSHOVER_TOKEN=...
 
-## Set up the watcher on the Node (Linux) 
+## 2) Set up the watcher on the Node (Linux Server) 
 The following assumes:
 
 - your bitcoind is run by user 'bitcoin' (standard) and watcher therefore lives at: /home/bitcoin/monitoring/bip110
@@ -158,7 +160,7 @@ Edit your .env for run configuration:
     - every-block toasts (TOAST_EVERY_BLOCK=1)
     - heartbeats (HEARTBEAT_EVERY_N_BLOCKS=144, etc.)
 
-## Run an interactive test from Node of the Watcher to see Block Notifications
+## 2a) Run an interactive test from Node of the Watcher to see Block Notifications on Toast
 Run the watcher manually once to prove it all works before committing to systemd:
 ```bash
 sudo -iu bitcoin bash -lc '
@@ -172,14 +174,7 @@ success is seeing log lines such as:
 - 'Pushover enabled...'
 - One new log line per new BTC block
 
-## Run an interactive LAN test (node to desktop) if you haven't already done this setting up Toast
-```
-curl --connect-timeout 3 --max-time 5 -H "Content-Type: text/plain; charset=utf-8" \
-  --data-binary "LAN TEST from node ✅" \
-  "http://DESKTOP_IP:8099/"
-```
-
-## Setup Watcher as Systemd managed background service
+## 3) Setup Watcher as a durable, Systemd managed background service
 Copy the included/suggested Service unit file into place...
 ```bash
 sudo cp systemd/bip110-watch.service /etc/systemd/system/bip110-watch.service
@@ -194,5 +189,5 @@ Optional Follow Logs till you see at least 1 block get detected and toasted:
 ```bash
 sudo journalctl -u bip110-watch.service -f
 ```
-## MIT License
-[project LICENSE](LICENSE)
+# MIT License
+See Project [LICENSE](LICENSE)
